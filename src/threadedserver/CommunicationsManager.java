@@ -16,30 +16,33 @@ public class CommunicationsManager
 	 * This method will find the user the other user would like to talk to Later
 	 * this will call from a database
 	 */
-	public ThreadedClient findFriend(String nameIn)
+	public ThreadedClient findFriend(String nameToFindIn, ThreadedClient lookingClient)
 	{
 		for (int i = 0; i < clientList.size(); i++)
 		{
 			ThreadedClient client = clientList.get(i);
-			
-			if (client.getName().equals(nameIn))
+			if (!client.equals(lookingClient))
 			{
-				System.out.println(client.getName() + " " + nameIn);
-				return client;
+				if (client.getName().equals(nameToFindIn))
+				{
+					System.out.println(client.getName() + " " + lookingClient.getName());
+					return client;
+				}
 			}
+			
 		}
 		
 		return null;
 	}
 	
-	public boolean sendMessageRequest(String nameIn)
+	public boolean sendMessageRequest(String clientToFind, ThreadedClient lookingClient)
 	{
-		ThreadedClient client = findFriend(nameIn);
-		if (client == null)
+		ThreadedClient foundClient = findFriend(clientToFind, lookingClient);
+		if (foundClient == null)
 		{
 			return false;
 		}
-		else return client.sendMessagePermissionRequest(nameIn);
+		else return foundClient.sendMessagePermissionRequest(foundClient, lookingClient);
 	}
 	
 	/**
@@ -59,17 +62,16 @@ public class CommunicationsManager
 		clientThread.start();
 	}
 	
-	public boolean SendMessageToConnectedUser(String nameIn, String message)
+	public boolean SendMessageToConnectedUser(ThreadedClient clientIn, String message)
 	{
-		ThreadedClient client = findFriend(nameIn);
 		
-		if (client == null)
+		if (clientIn == null)
 		{
 			return false;
 		}
 		else
 		{
-			client.sendUserMessage("\t\t\t\t" + message);
+			clientIn.sendUserMessage("\t\t\t\t" + message);
 			return true;
 		}
 	}

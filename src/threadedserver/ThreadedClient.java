@@ -19,11 +19,14 @@ import java.util.logging.Logger;
 public class ThreadedClient implements Runnable
 {
 	
-	private Socket      socket;
-	private PrintStream out;
-	private Scanner     scanner;
-	private String      name;
-	private String      currentlyMessaging = null;
+	private Socket         socket;
+	private PrintStream    out;
+	private Scanner        scanner;
+	private String         name;
+	private String         currentlyMessaging = null;
+	private ThreadedClient connectedClient    = null;
+	public boolean         requestingFriend   = false;
+	public boolean         currentlyChatting  = false;
 	
 	private CommunicationsManager manager;
 	
@@ -52,8 +55,6 @@ public class ThreadedClient implements Runnable
 			
 			name = scanner.nextLine();
 			
-			sendUserMessage("Who would you like to talk too (enter a name)");
-			
 			waitingForFriend();
 			
 		} catch (IOException ex)
@@ -64,9 +65,13 @@ public class ThreadedClient implements Runnable
 	
 	public void waitingForFriend()
 	{
+		sendUserMessage("Who would you like to talk too (enter a name)");
+		
 		String attemptedFriend = scanner.nextLine();
 		
-		boolean connected = manager.sendMessageRequest(attemptedFriend);
+		System.out.println("Test; " + attemptedFriend);
+		
+		boolean connected = manager.sendMessageRequest(attemptedFriend, this);
 		
 		if (!connected)
 		{
@@ -102,8 +107,10 @@ public class ThreadedClient implements Runnable
 	
 	public void messageState()
 	{
-		sendUserMessage("You are now connected with : " + currentlyMessaging + "\nDon't be shy, send a message!");
-		boolean isCurrentlyMessaging = currentlyMessaging(currentlyMessaging);
+		currentlyChatting = true;
+		sendUserMessage(
+				"You are now connected with : " + connectedClient.getName() + "\nDon't be shy, send a message!");
+		boolean isCurrentlyMessaging = currentlyMessaging(connectedClient);
 		
 		if (!isCurrentlyMessaging)
 		{
@@ -112,15 +119,15 @@ public class ThreadedClient implements Runnable
 		}
 	}
 	
-	public boolean currentlyMessaging(String nameIn)
+	public boolean currentlyMessaging(ThreadedClient clientIn)
 	{
 		String message = scanner.nextLine();
 		
 		if (message != "LEAVE" || currentlyMessaging == null)
 		{
 			sendUserMessage(message);
-			sendConnectedUserMessage(nameIn, message);
-			return currentlyMessaging(nameIn);
+			sendConnectedUserMessage(clientIn, message);
+			return currentlyMessaging(clientIn);
 		}
 		else
 		{
@@ -128,22 +135,29 @@ public class ThreadedClient implements Runnable
 		}
 	}
 	
-	private void sendConnectedUserMessage(String nameIn, String message)
+	private void sendConnectedUserMessage(ThreadedClient clientIn, String message)
 	{
-		manager.SendMessageToConnectedUser(nameIn, message);
+		manager.SendMessageToConnectedUser(clientIn, message);
 	}
 	
-	public boolean sendMessagePermissionRequest(String nameIn)
+	public boolean sendMessagePermissionRequest(ThreadedClient clientIn, ThreadedClient lookingClient)
 	{
-		System.out.println(getName() + " here " + nameIn);
-		out.println("Would you like to talk to " + nameIn + "?");
+		String tempString = "";
+		out.println("Would you like to talk to " + lookingClient.getName() + "?");
 		out.println("Y or N");
 		out.flush();
-		String tempString = scanner.nextLine();
+		try
+		{
+			
+			tempString = scanner.nextLine();
+		} catch (IndexOutOfBoundsException e)
+		{
+			System.out.println("ERROR");
+		}
 		
 		if (tempString.equals("Y"))
 		{
-			currentlyMessaging = nameIn;
+			connectedClient = clientIn;
 			return true;
 		}
 		else if (tempString.equals("N"))
@@ -152,9 +166,7 @@ public class ThreadedClient implements Runnable
 		}
 		else
 		{
-			out.println("Try again!");
-			out.flush();
-			return sendMessagePermissionRequest(nameIn);
+			return false;
 		}
 	}
 }
