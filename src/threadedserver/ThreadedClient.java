@@ -27,6 +27,7 @@ public class ThreadedClient implements Runnable
 	private ThreadedClient connectedClient    = null;
 	public boolean         requestingFriend   = false;
 	public boolean         currentlyChatting  = false;
+        private boolean loggedIn = false;
 	
 	private CommunicationsManager manager;
 	
@@ -49,13 +50,19 @@ public class ThreadedClient implements Runnable
 					+ "\t\tWelcome to BareBones text messaging application.\r\n"
 					+ "================================================================================";
 			
-			sendUserMessage(welcomeMessage);
+			sendUserMessageLN(welcomeMessage);
 			
-			sendUserMessage("Please enter your name?");
+			sendUserMessage("Please enter your name: ");
 			
 			name = scanner.nextLine();
 			
-			waitingForFriend();
+                        sendUserMessageLN("Welcome " + name + " to my server!\rn Type -help for a list of commands!");
+                        
+                        loggedIn = true;
+                                           
+                        baseState();
+                        
+			//waitingForFriend();
 			
 		} catch (IOException ex)
 		{
@@ -63,9 +70,10 @@ public class ThreadedClient implements Runnable
 		}
 	}
 	
+        
 	public void waitingForFriend()
 	{
-		sendUserMessage("Who would you like to talk too (enter a name)");
+		sendUserMessageLN("Who would you like to talk too (enter a name)");
 		
 		String attemptedFriend = scanner.nextLine();
 		
@@ -75,18 +83,97 @@ public class ThreadedClient implements Runnable
 		
 		if (!connected)
 		{
-			sendUserMessage("No user found.");
+			sendUserMessageLN("No user found.");
 			waitingForFriend();
 		}
 	}
-	
-	/**
+        
+       private String helpString()
+       {
+           return "-fr: Returns friend requests.\rn"
+                   + "-mf <Friend Name>: Opens up a chat with your friend.\rn"
+                   + "-sfr <Friend Name>: Sends a friend request to the specified user\rn"
+                   + "-cm <Friend Name>: Checks messages you have.";
+       }
+       
+        public void baseState()
+        {
+            baseString();
+            String commandIn = scanner.nextLine();
+            String responce = "";
+           
+            switch (commandIn)
+            {
+                case "-help":
+                {
+                    responce = helpString();
+                    sendUserMessageLN(responce);
+                    baseState();
+                    break;
+                }
+                case "-mf":
+                {
+                    sendUserMessageLN("ENTER A FRIEND NAME");
+                    String friendName = scanner.nextLine();
+                    sendUserMessageLN("Now attempting to contact " + friendName + ".");
+                    ThreadedClient friendClient = manager.findFriend(friendName, this);
+                    sendMessagePermissionRequest(friendClient, this);
+                    break;
+                }
+                default:
+                {
+                    baseState();
+                }
+                
+            }
+            
+          
+                    
+        }
+        
+        public void baseString()
+	{
+            String message = this.getName() + " ~ ";
+	    out.print(message);
+	    out.flush();
+	}
+        
+        /**
 	 * Sends the user a message and flushes the PrintStream
+         * with a newline
 	 * 
 	 * @param messageIn - The message to be send to the user
 	 */
 	public void sendUserMessage(String messageIn)
 	{
+            if (!loggedIn)
+            {
+                // Do nothing
+            }
+            else
+            {
+                baseString();
+            }
+		out.print(messageIn);
+		out.flush();
+	}
+        
+	/**
+	 * Sends the user a message and flushes the PrintStream
+         * with a newline
+	 * 
+	 * @param messageIn - The message to be send to the user
+	 */
+	public void sendUserMessageLN(String messageIn)
+	{
+            if (!loggedIn)
+            {
+                // Do nothing
+            }
+            else
+            {
+                baseString();
+            }
 		out.println(messageIn);
 		out.flush();
 	}
@@ -108,13 +195,13 @@ public class ThreadedClient implements Runnable
 	public void messageState()
 	{
 		currentlyChatting = true;
-		sendUserMessage(
-				"You are now connected with : " + connectedClient.getName() + "\nDon't be shy, send a message!");
+		sendUserMessageLN(
+				"You are now connected with : " + connectedClient.getName() + "\rnDon't be shy, send a message!");
 		boolean isCurrentlyMessaging = currentlyMessaging(connectedClient);
 		
 		if (!isCurrentlyMessaging)
 		{
-			sendUserMessage("Disconnecting from " + currentlyMessaging + ".");
+			sendUserMessageLN("Disconnecting from " + currentlyMessaging + ".");
 			currentlyMessaging = null;
 		}
 	}
@@ -125,7 +212,7 @@ public class ThreadedClient implements Runnable
 		
 		if (message != "LEAVE" || currentlyMessaging == null)
 		{
-			sendUserMessage(message);
+			sendUserMessageLN(message);
 			sendConnectedUserMessage(clientIn, message);
 			return currentlyMessaging(clientIn);
 		}
